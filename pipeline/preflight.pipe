@@ -1,0 +1,181 @@
+{
+	"components": [
+		{
+			"id": "input",
+			"provider": "webhook",
+			"config": {}
+		},
+		{
+			"id": "review_agent",
+			"provider": "agent_rocketride",
+			"config": {
+				"agent_description": "Preflight deploy-readiness reviewer",
+				"instructions": [
+					"You are Preflight's review pipeline. Each request is a JSON object: {review_id, project_id, repo_url, kind}.",
+					"Protocol \u2014 follow exactly:",
+					"1. Clone the repo with the git tool (read-only).",
+					"2. With the python tool, list *.py files and extract: import edges between repo files, os.environ/os.getenv reads (name + line), hardcoded credential literals (sk_live_/whsec_/AKIA/ghp_ prefixes or SECRET/TOKEN/API_KEY = '<16+ chars>'), and the prod env manifest keys (deploy/prod.env, prod.env, or .env.production). Changed files = .preflight-changed manifest if present, else all files.",
+					"3. With the neo4j tool, MERGE the graph: (Project {id})-[:HAS_FILE]->(File {key: project_id + '#' + path}), (File)-[:IMPORTS]->(File), (File)-[:READS {line}]->(EnvVar {key: project_id + '#' + name}), (EnvVar)-[:SET_IN]->(Env {name:'prod'}) for manifest keys, (Review {id: review_id})-[:CHANGED]->(File). Then run FOUR queries: Q1 blast radius (reverse IMPORTS*1..3 from changed files), Q2 fan-in per changed file (load-bearing when >= 3), Q3 changed files READS EnvVar with no SET_IN prod, Q4 prior Finding nodes ON files within 2 IMPORTS hops. Record findings as (Review)-[:PRODUCED]->(Finding {id: review_id + '#' + n})-[:ON]->(File).",
+					"4. Compose findings as JSON objects: {class: missing_env_var|hardcoded_secret|load_bearing_change|model_review, severity: error|warning, confidence, detail (cite file:line and hop counts), file_path, line, graph_evidence: {query, blast, seen_before}}.",
+					"5. Only if kind == 'deep': use the daytona tool to run the repo's tests (pip install -r requirements.txt if present, then python -m pytest tests -q) and attach failing output as a finding {class: test_failure, severity: error}; also add at most 2 model_review findings for genuinely new risks you can see in the data.",
+					"6. ALWAYS finish by POSTing with the http tool to ${ROCKETRIDE_CALLBACK_URL} with header X-Callback-Key: ${ROCKETRIDE_CALLBACK_KEY} and JSON body {review_id, status: 'complete', blast_radius: <max Q1 count>, model_id: 'llama-3-3-70b@nebius', findings: [...]}. If any earlier step failed, still POST with status 'failed' and findings [].",
+					"7. Answer with a one-line summary: '<n> findings; callback <http status>'."
+				],
+				"max_waves": 12,
+				"parameters": {}
+			},
+			"input": [
+				{
+					"lane": "questions",
+					"from": "input"
+				}
+			]
+		},
+		{
+			"id": "nebius_llm",
+			"provider": "llm_nebius",
+			"config": {
+				"profile": "llama-3-3-70b",
+				"llama-3-3-70b": {
+					"apikey": "${ROCKETRIDE_NEBIUS_KEY}"
+				}
+			},
+			"control": [
+				{
+					"classType": "llm",
+					"from": "review_agent"
+				}
+			]
+		},
+		{
+			"id": "agent_memory",
+			"provider": "memory_internal",
+			"config": {
+				"type": "memory_internal"
+			},
+			"control": [
+				{
+					"classType": "memory",
+					"from": "review_agent"
+				}
+			]
+		},
+		{
+			"id": "git_tool",
+			"provider": "tool_git",
+			"config": {
+				"type": "tool_git",
+				"authType": "none",
+				"readOnlyMode": true,
+				"safeMode": true,
+				"repoPath": "/tmp/preflight-repos"
+			},
+			"control": [
+				{
+					"classType": "tool",
+					"from": "review_agent"
+				}
+			]
+		},
+		{
+			"id": "python_tool",
+			"provider": "tool_python",
+			"config": {
+				"type": "tool_python",
+				"timeout": 120,
+				"allowedModules": [
+					{
+						"moduleName": "ast"
+					},
+					{
+						"moduleName": "os"
+					},
+					{
+						"moduleName": "pathlib"
+					},
+					{
+						"moduleName": "re"
+					},
+					{
+						"moduleName": "json"
+					}
+				]
+			},
+			"control": [
+				{
+					"classType": "tool",
+					"from": "review_agent"
+				}
+			]
+		},
+		{
+			"id": "neo4j_db",
+			"provider": "db_neo4j",
+			"config": {
+				"profile": "default",
+				"default": {
+					"uri": "${ROCKETRIDE_NEO4J_URI}",
+					"database": "neo4j",
+					"auth_method": "userpass",
+					"user": "${ROCKETRIDE_NEO4J_USER}",
+					"password": "${ROCKETRIDE_NEO4J_PASS}",
+					"allow_execute": true
+				}
+			},
+			"control": [
+				{
+					"classType": "tool",
+					"from": "review_agent"
+				}
+			]
+		},
+		{
+			"id": "daytona_tool",
+			"provider": "tool_daytona",
+			"config": {
+				"type": "tool_daytona",
+				"apikey": "${ROCKETRIDE_DAYTONA_KEY}",
+				"language": "python",
+				"exec_timeout_secs": 180,
+				"auto_stop_minutes": 10
+			},
+			"control": [
+				{
+					"classType": "tool",
+					"from": "review_agent"
+				}
+			]
+		},
+		{
+			"id": "http_tool",
+			"provider": "tool_http_request",
+			"config": {
+				"type": "tool_http_request"
+			},
+			"control": [
+				{
+					"classType": "tool",
+					"from": "review_agent"
+				}
+			]
+		},
+		{
+			"id": "output",
+			"provider": "response_answers",
+			"config": {},
+			"input": [
+				{
+					"lane": "answers",
+					"from": "review_agent"
+				}
+			]
+		}
+	],
+	"project_id": "43c1762d-470d-4f34-b354-f60133d2773d",
+	"viewport": {
+		"x": 0,
+		"y": 0,
+		"zoom": 1
+	},
+	"version": 1
+}
