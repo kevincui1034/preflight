@@ -3,11 +3,21 @@
 		{
 			"id": "input",
 			"provider": "webhook",
-			"config": {}
+			"name": "Webhook",
+			"config": {},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 150
+				},
+				"nodeType": "default",
+				"formDataValid": false
+			}
 		},
 		{
 			"id": "review_agent",
 			"provider": "agent_rocketride",
+			"name": "RocketRide Wave",
 			"config": {
 				"agent_description": "Preflight deploy-readiness reviewer",
 				"instructions": [
@@ -24,6 +34,14 @@
 				"max_waves": 12,
 				"parameters": {}
 			},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"nodeType": "default",
+				"formDataValid": true
+			},
 			"input": [
 				{
 					"lane": "questions",
@@ -34,11 +52,20 @@
 		{
 			"id": "nebius_llm",
 			"provider": "llm_nebius",
+			"name": "Nebius",
 			"config": {
 				"profile": "llama-3-3-70b",
 				"llama-3-3-70b": {
 					"apikey": "${ROCKETRIDE_NEBIUS_KEY}"
 				}
+			},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"nodeType": "default",
+				"formDataValid": true
 			},
 			"control": [
 				{
@@ -50,8 +77,17 @@
 		{
 			"id": "agent_memory",
 			"provider": "memory_internal",
+			"name": "Memory (Internal)",
 			"config": {
 				"type": "memory_internal"
+			},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"nodeType": "default",
+				"formDataValid": true
 			},
 			"control": [
 				{
@@ -63,12 +99,21 @@
 		{
 			"id": "git_tool",
 			"provider": "tool_git",
+			"name": "Git",
 			"config": {
 				"type": "tool_git",
 				"authType": "none",
-				"readOnlyMode": true,
+				"readOnlyMode": false,
 				"safeMode": true,
-				"repoPath": "/tmp/preflight-repos"
+				"repoPath": ""
+			},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"nodeType": "default",
+				"formDataValid": true
 			},
 			"control": [
 				{
@@ -80,6 +125,7 @@
 		{
 			"id": "python_tool",
 			"provider": "tool_python",
+			"name": "Python",
 			"config": {
 				"type": "tool_python",
 				"timeout": 120,
@@ -101,6 +147,14 @@
 					}
 				]
 			},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"nodeType": "default",
+				"formDataValid": true
+			},
 			"control": [
 				{
 					"classType": "tool",
@@ -111,6 +165,7 @@
 		{
 			"id": "neo4j_db",
 			"provider": "db_neo4j",
+			"name": "Neo4J",
 			"config": {
 				"profile": "default",
 				"default": {
@@ -122,6 +177,14 @@
 					"allow_execute": true
 				}
 			},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"nodeType": "default",
+				"formDataValid": false
+			},
 			"control": [
 				{
 					"classType": "tool",
@@ -132,12 +195,21 @@
 		{
 			"id": "daytona_tool",
 			"provider": "tool_daytona",
+			"name": "Daytona",
 			"config": {
 				"type": "tool_daytona",
 				"apikey": "${ROCKETRIDE_DAYTONA_KEY}",
 				"language": "python",
 				"exec_timeout_secs": 180,
 				"auto_stop_minutes": 10
+			},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"nodeType": "default",
+				"formDataValid": false
 			},
 			"control": [
 				{
@@ -149,8 +221,17 @@
 		{
 			"id": "http_tool",
 			"provider": "tool_http_request",
+			"name": "HTTP Request",
 			"config": {
 				"type": "tool_http_request"
+			},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"nodeType": "default",
+				"formDataValid": false
 			},
 			"control": [
 				{
@@ -162,7 +243,16 @@
 		{
 			"id": "output",
 			"provider": "response_answers",
+			"name": "Return Answers",
 			"config": {},
+			"ui": {
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"nodeType": "default",
+				"formDataValid": false
+			},
 			"input": [
 				{
 					"lane": "answers",
@@ -172,10 +262,12 @@
 		}
 	],
 	"project_id": "43c1762d-470d-4f34-b354-f60133d2773d",
-	"viewport": {
-		"x": 0,
-		"y": 0,
-		"zoom": 1
-	},
-	"version": 1
+	"version": 1,
+	"isLocked": false,
+	"snapToGrid": true,
+	"snapGridSize": [
+		10,
+		10
+	],
+	"docRevision": 8
 }
