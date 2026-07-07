@@ -25,3 +25,4 @@ out/
 # local scratch
 *.log
 tmp/
+.rocketride/
