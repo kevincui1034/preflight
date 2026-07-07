@@ -96,14 +96,11 @@ async function api(p,o={}){const r=await fetch(API+p,{...o,headers:{"Content-Typ
 (function(){const text="will your repo\nsurvive the deploy?";const h=$("headline");let i=0;
 setTimeout(()=>{const cur='<span class="inline-block w-[2px] h-[1.1em] bg-black align-middle ml-[2px] animate-blink"></span>';
 const t=setInterval(()=>{i++;h.innerHTML=text.slice(0,i).replace(/\n/g,"<br>")+(i<text.length?cur:"");if(i>=text.length)clearInterval(t)},38)},600)})();
-(function(){const v=$("bgvid");v.loop=false;
-function reverse(){v.pause();let last=performance.now();
-function step(now){const dt=(now-last)/1000;last=now;
-v.currentTime=Math.max(0,v.currentTime-dt);
-if(v.currentTime<=0.03){v.currentTime=0;v.play().catch(()=>{});return}
-requestAnimationFrame(step)}
-requestAnimationFrame(step)}
-v.addEventListener("ended",reverse);
+(function(){const v=$("bgvid");v.loop=false;let rev=false;
+v.addEventListener("ended",()=>{rev=true;v.pause();v.currentTime=Math.max(0,v.currentTime-0.06)});
+v.addEventListener("seeked",()=>{if(!rev)return;
+if(v.currentTime<=0.08){rev=false;v.currentTime=0;v.play().catch(()=>{})}
+else setTimeout(()=>{v.currentTime=Math.max(0,v.currentTime-0.06)},16)});
 v.play().catch(()=>{})})();
 (function(){const b=$("burger"),m=$("mobileMenu"),s=b.querySelectorAll("span");let open=false;
 b.onclick=()=>{open=!open;
