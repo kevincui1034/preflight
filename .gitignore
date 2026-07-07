@@ -1,0 +1,27 @@
+# secrets — platform env config only, never git
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+
+# node
+node_modules/
+.next/
+out/
+
+# os / editors
+.DS_Store
+.idea/
+
+# local scratch
+*.log
+tmp/
