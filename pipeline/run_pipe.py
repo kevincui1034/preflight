@@ -17,7 +17,7 @@ from rocketride import RocketRideClient
 
 async def main() -> None:
     review_id = sys.argv[1] if len(sys.argv) > 1 else "local-test"
-    repo_url = sys.argv[2] if len(sys.argv) > 2 else "https://github.com/preflight-demo/demo-service"
+    repo_url = sys.argv[2] if len(sys.argv) > 2 else "https://github.com/kevincui1034/preflight-demo-service"
     kind = sys.argv[3] if len(sys.argv) > 3 else "free"
     client = RocketRideClient()
     await client.connect()
