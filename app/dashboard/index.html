@@ -4,168 +4,177 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Preflight — will your repo survive the deploy?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','ui-sans-serif','system-ui']}}}}</script>
 <style>
-  :root { --bg:#0b0e14; --card:#141a26; --ink:#e6edf3; --dim:#8b98a9; --acc:#4da3ff; --err:#ff6b6b; --warn:#ffb454; --ok:#3fd68f; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; }
-  .wrap { max-width:880px; margin:0 auto; padding:24px 16px 64px; }
-  h1 { font-size:22px; } h1 small { color:var(--dim); font-weight:400; font-size:14px; display:block; }
-  .card { background:var(--card); border:1px solid #232b3b; border-radius:10px; padding:16px; margin:12px 0; }
-  input,select { background:#0d1320; color:var(--ink); border:1px solid #2a3550; border-radius:6px; padding:8px 10px; margin:4px 6px 4px 0; }
-  button { background:var(--acc); color:#04121f; border:0; border-radius:6px; padding:8px 14px; font-weight:600; cursor:pointer; margin:4px 6px 4px 0; }
-  button.ghost { background:transparent; color:var(--acc); border:1px solid var(--acc); }
-  .dim { color:var(--dim); font-size:13px; }
-  .sev-error { color:var(--err); font-weight:700; } .sev-warning { color:var(--warn); font-weight:700; }
-  .pill { display:inline-block; padding:1px 8px; border-radius:99px; font-size:12px; border:1px solid #2a3550; margin-right:6px; }
-  .finding { border-top:1px solid #232b3b; padding:10px 0; }
-  code { background:#0d1320; padding:1px 5px; border-radius:4px; font-size:13px; }
-  #msg { color:var(--warn); min-height:1.2em; }
-  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.animate-blink{animation:blink 1s step-end infinite}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.drop-in{animation:fadeUp .6s ease both}.drop-in-2{animation:fadeUp .6s ease .1s both}
 </style>
 </head>
-<body><div class="wrap">
-<h1>🛫 Preflight <small>Paste a repo — an agent tells you whether it will survive the deploy, with graph evidence instead of vibes.</small></h1>
-<div id="msg"></div>
-
-<div class="card" id="authCard">
-  <b>Sign in</b> <span class="dim">(auth by Butterbase — your reviews are yours alone)</span><br>
-  <input id="email" type="email" placeholder="email">
-  <input id="password" type="password" placeholder="password (Aa1! + 8 chars)">
-  <button onclick="login()">Log in</button>
-  <button class="ghost" onclick="signup()">Sign up</button>
-  <div id="verifyRow" style="display:none">
-    <input id="code" placeholder="6-digit email code">
-    <button class="ghost" onclick="verify()">Verify email</button>
-  </div>
+<body class="relative bg-white text-neutral-900 font-sans selection:bg-[#EAECE9] selection:text-[#1C2E1E] antialiased overflow-x-hidden flex flex-col lg:block lg:min-h-screen">
+<div class="order-last lg:order-none relative lg:absolute lg:inset-0 lg:z-0 overflow-hidden pointer-events-none w-full aspect-square md:aspect-video lg:aspect-auto lg:h-full bg-neutral-50 lg:bg-transparent">
+<video id="bgvid" muted playsinline preload="auto" class="w-full h-full object-cover object-right lg:object-right-bottom" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260601_110537_3a579fa0-7bbc-4d94-9d25-0e816c7840f5.mp4"></video>
 </div>
-
-<div id="appView" style="display:none">
-  <div class="card row">
-    <div><b id="who"></b> <span class="dim" id="balance"></span></div>
-    <div>
-      <button class="ghost" onclick="buyCredits()">Buy 5 credits ($5)</button>
-      <button class="ghost" onclick="logout()">Log out</button>
-    </div>
-  </div>
-  <div class="card">
-    <b>New review</b><br>
-    <input id="repoUrl" size="42" placeholder="https://github.com/you/repo" value="https://github.com/kevincui1034/preflight-demo-service">
-    <select id="kind"><option value="free">free — checks + graph</option><option value="deep">deep — + Nebius judge + Daytona run (1 credit)</option></select>
-    <button onclick="createReview()">Run preflight</button>
-  </div>
-  <div class="card"><b>Reviews</b><div id="reviews" class="dim">loading…</div></div>
-  <div class="card" id="findingsCard" style="display:none"><b>Findings</b><div id="findings"></div></div>
+<header class="fixed top-0 inset-x-0 z-10 px-5 sm:px-8 py-4 sm:py-5 flex flex-row justify-between items-center bg-transparent">
+<div class="flex flex-row gap-3 items-center">
+<span class="text-[21px] sm:text-[26px] tracking-tight text-black font-medium select-none">Preflight&reg;</span>
+<span class="text-[25px] sm:text-[30px] text-black select-none tracking-[-0.02em] font-medium leading-none mb-1">&#10033;</span>
 </div>
-
+<nav class="hidden md:flex flex-row text-[23px] text-black">
+<a href="#reviews" class="hover:opacity-60 transition-opacity">Reviews</a><span class="opacity-40">,&nbsp;</span>
+<a href="https://console.neo4j.io" target="_blank" class="hover:opacity-60 transition-opacity">Graph</a><span class="opacity-40">,&nbsp;</span>
+<a href="https://github.com/kevincui1034/preflight" target="_blank" class="hover:opacity-60 transition-opacity">GitHub</a>
+</nav>
+<a href="#account" class="hidden md:inline text-[23px] text-black underline underline-offset-2 hover:opacity-60 transition-opacity" id="ctaLink">Sign in</a>
+<button id="burger" class="md:hidden flex flex-col gap-[5px] p-2" aria-label="menu">
+<span class="w-6 h-[2px] bg-black transition-all duration-300"></span>
+<span class="w-6 h-[2px] bg-black transition-all duration-300"></span>
+<span class="w-6 h-[2px] bg-black transition-all duration-300"></span>
+</button>
+</header>
+<div id="mobileMenu" class="md:hidden fixed inset-0 z-[9] bg-white/95 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col items-center justify-center gap-8 text-[28px]">
+<a href="#reviews">Reviews</a>
+<a href="https://github.com/kevincui1034/preflight">GitHub</a>
+<a href="#account" class="underline underline-offset-2">Sign in</a>
+</div>
+<div class="relative z-10 flex flex-col order-first lg:order-none w-full bg-white lg:bg-transparent pb-8 lg:pb-0 lg:min-h-screen">
+<main id="spade-hero" class="w-full max-w-7xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center pt-28">
+<div class="drop-in"><h1 id="headline" class="text-5xl md:text-6xl lg:text-[76px] font-normal tracking-tight text-black leading-[1.08] mb-8 select-none w-full whitespace-pre-wrap"></h1></div>
+<div class="drop-in-2"><p class="text-lg md:text-xl text-[#5A635A] leading-relaxed font-normal mb-14 max-w-2xl">An agent reviews your repo with graph evidence instead of vibes —<br>blast radius, prod env gaps, and proof by execution before you ship.</p></div>
+<div id="msg" class="text-[#4D6D47] min-h-[1.4em] mb-4 text-sm"></div>
+<section id="account" class="drop-in-2 max-w-2xl">
+<div id="authCard" class="bg-[#FAFBF9] border border-[#F1F3F1] rounded-2xl p-6 mb-10">
+<h2 class="text-2xl font-medium tracking-tight mb-2">Sign in</h2>
+<p class="opacity-85 text-[#738273] mb-6 text-sm">Auth by Butterbase — your reviews are yours alone.</p>
+<input id="email" type="email" placeholder="email" class="border border-[#F1F3F1] rounded-xl px-4 py-2.5 mr-2 mb-2 bg-white">
+<input id="password" type="password" placeholder="password (Aa1! + 8 chars)" class="border border-[#F1F3F1] rounded-xl px-4 py-2.5 mr-2 mb-2 bg-white">
+<div class="flex gap-2 flex-wrap">
+<button onclick="login()" class="bg-[#1C2E1E] text-white rounded-full px-6 py-2.5 hover:opacity-90 transition">Log in</button>
+<button onclick="signup()" class="bg-white text-[#1C2E1E] border border-[#F1F3F1] rounded-full px-6 py-2.5 hover:bg-[#F1F3F1]/55 transition">Sign up</button>
+</div>
+<div id="verifyRow" class="hidden mt-3">
+<input id="code" placeholder="6-digit email code" class="border border-[#F1F3F1] rounded-xl px-4 py-2.5 mr-2 bg-white">
+<button onclick="verify()" class="underline underline-offset-2 text-[#1C2E1E]">Verify email</button>
+</div>
+</div>
+</section>
+<div id="appView" class="hidden">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-10 max-w-2xl">
+<div><span id="who" class="font-medium"></span> <span id="balance" class="text-[#738273]"></span></div>
+<div class="flex gap-2">
+<button onclick="buyCredits()" class="bg-white text-[#1C2E1E] border border-[#F1F3F1] rounded-full px-5 py-2 hover:bg-[#F1F3F1]/55 transition text-sm">Buy 5 credits ($5)</button>
+<button onclick="logout()" class="text-[#738273] underline underline-offset-2 text-sm">Log out</button>
+</div>
+</div>
+<h2 class="text-2xl font-medium tracking-tight mb-2">What sort of review?</h2>
+<p class="opacity-85 text-[#738273] mb-8">Select all that apply</p>
+<input id="repoUrl" value="https://github.com/kevincui1034/preflight-demo-service" class="border border-[#F1F3F1] rounded-xl px-4 py-2.5 mb-5 bg-white block w-full max-w-xl">
+<div id="pills" class="flex flex-wrap gap-3 mb-6"></div>
+<div id="pillStatus" class="mb-14 max-w-xl"></div>
+<section id="reviews">
+<h2 class="text-2xl font-medium tracking-tight mb-4">Reviews</h2>
+<div id="reviewsList" class="text-[#738273] max-w-2xl">loading…</div>
+<div id="findingsCard" class="hidden mt-8">
+<h2 class="text-2xl font-medium tracking-tight mb-4">Findings</h2>
+<div id="findings" class="max-w-2xl"></div>
+</div>
+</section>
+</div>
+</main>
+</div>
 <script>
-const APP_ID = "app_pwpiaegbqw20";
-const API = "https://api.butterbase.ai";
-const PRODUCT_ID = "1f42d14a-e5d6-43c9-aed4-8696fdef0688";
-let token = localStorage.getItem("pf_token") || "";
-let userEmail = localStorage.getItem("pf_email") || "";
-const $ = (id) => document.getElementById(id);
-const msg = (t) => { $("msg").textContent = t || ""; };
-const rowsOf = (d) => Array.isArray(d) ? d : (d && (d.rows || d.data || d.items)) || [];
-
-async function api(path, opts = {}) {
-  const r = await fetch(API + path, { ...opts, headers: {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: "Bearer " + token } : {}),
-    ...(opts.headers || {}) } });
-  let body = null; try { body = await r.json(); } catch (_e) {}
-  return { ok: r.ok, status: r.status, body };
-}
-
-async function signup() {
-  const r = await api(`/auth/${APP_ID}/signup`, { method: "POST", body: JSON.stringify({
-    email: $("email").value, password: $("password").value }) });
-  if (!r.ok) return msg("signup failed: " + JSON.stringify(r.body?.error || r.body));
-  $("verifyRow").style.display = "block";
-  msg("Account created — check email for the 6-digit code (or just try logging in).");
-}
-async function verify() {
-  const r = await api(`/auth/${APP_ID}/verify-email`, { method: "POST", body: JSON.stringify({
-    email: $("email").value, code: $("code").value }) });
-  msg(r.ok ? "Verified — log in." : "verify failed: " + JSON.stringify(r.body?.error || r.body));
-}
-async function login() {
-  const r = await api(`/auth/${APP_ID}/login`, { method: "POST", body: JSON.stringify({
-    email: $("email").value, password: $("password").value }) });
-  if (!r.ok) { $("verifyRow").style.display = "block"; return msg("login failed: " + JSON.stringify(r.body?.error || r.body)); }
-  token = r.body.access_token; userEmail = r.body.user?.email || $("email").value;
-  localStorage.setItem("pf_token", token); localStorage.setItem("pf_email", userEmail);
-  show();
-}
-function logout() { token = ""; localStorage.clear(); location.reload(); }
-
-async function refreshBalance() {
-  const r = await api(`/v1/${APP_ID}/credits_ledger`);
-  const rows = rowsOf(r.body);
-  const bal = rows.reduce((s, x) => s + Number(x.delta || 0), 0);
-  $("balance").textContent = `· ${bal} credit${bal === 1 ? "" : "s"}`;
-}
-async function buyCredits() {
-  if (!PRODUCT_ID) {
-    // Until the Stripe product exists, credits can only arrive via checkout.
-    return msg("Credit packs go live once Stripe Connect onboarding completes.");
-  }
-  const r = await api(`/v1/${APP_ID}/billing/purchase`, { method: "POST", body: JSON.stringify({
-    productId: PRODUCT_ID, successUrl: location.href.split("?")[0] + "?paid=1", cancelUrl: location.href }) });
-  if (r.ok && r.body?.url) location.href = r.body.url;
-  else msg("purchase failed: " + JSON.stringify(r.body?.error || r.body));
-}
-async function claimCredits() {
-  const r = await api(`/v1/${APP_ID}/fn/claim-credits`, { method: "POST", body: "{}" });
-  if (r.ok && r.body.credited) msg(`+${r.body.credited} credits added.`);
-  refreshBalance();
-}
-
-async function createReview() {
-  msg("");
-  const kind = $("kind").value;
-  const r = await api(`/v1/${APP_ID}/fn/create-review`, { method: "POST", body: JSON.stringify({
-    repo_url: $("repoUrl").value, kind }) });
-  if (r.status === 402) return msg("Deep reviews cost 1 credit — buy a pack first.");
-  if (!r.ok) return msg("review failed: " + JSON.stringify(r.body?.error || r.body));
-  msg(r.body.dispatched ? "Review dispatched to the pipeline on cloud.rocketride.ai…" : "Review queued (pipeline endpoint not wired yet).");
-  refreshBalance(); loadReviews();
-}
-
-let reviewsCache = [];
-async function loadReviews() {
-  const r = await api(`/v1/${APP_ID}/reviews`);
-  reviewsCache = rowsOf(r.body).sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
-  $("reviews").innerHTML = reviewsCache.length ? reviewsCache.map(v =>
-    `<div class="finding"><span class="pill">${v.kind}</span><span class="pill">${v.status}</span>` +
-    `<code>${(v.id || "").slice(0, 8)}</code> ${v.created_at ? new Date(v.created_at).toLocaleTimeString() : ""}` +
-    (v.model_id ? ` <span class="dim">judged by ${v.model_id} on Nebius</span>` : "") +
-    ` <button class="ghost" onclick="loadFindings('${v.id}')">findings</button></div>`).join("") : "no reviews yet";
-  if (reviewsCache.some(v => v.status === "queued" || v.status === "running")) setTimeout(loadReviews, 5000);
-}
-async function loadFindings(reviewId) {
-  const r = await api(`/v1/${APP_ID}/findings`);
-  const rows = rowsOf(r.body).filter(f => f.review_id === reviewId);
-  $("findingsCard").style.display = "block";
-  $("findings").innerHTML = rows.length ? rows.map(f => {
-    const ev = typeof f.graph_evidence === "string" ? JSON.parse(f.graph_evidence || "{}") : (f.graph_evidence || {});
-    let extra = "";
-    if (ev.blast) extra += `<br><span class="dim">blast radius: reaches ${ev.blast.blast_radius} file(s) — ${(ev.blast.impacted || []).join(", ")}</span>`;
-    if (ev.seen_before?.length) extra += `<br><span class="dim">seen before in ${ev.seen_before.map(s => s.seen_in).join(", ")}</span>`;
-    if (ev.query) extra += `<br><span class="dim">derived from: <code>${ev.query}</code></span>`;
-    return `<div class="finding"><span class="sev-${f.severity}">${f.severity}</span> <b>${f.class}</b>` +
-      (f.file_path ? ` <code>${f.file_path}${f.line ? ":" + f.line : ""}</code>` : "") +
-      (f.model_id ? ` <span class="pill">judge: ${f.model_id}</span>` : "") +
-      `<br>${f.detail}${extra}</div>`;
-  }).join("") : '<span class="dim">no findings — clear to deploy ✈️</span>';
-}
-
-function show() {
-  $("authCard").style.display = "none"; $("appView").style.display = "block";
-  $("who").textContent = userEmail;
-  refreshBalance(); loadReviews();
-  if (new URLSearchParams(location.search).get("paid")) claimCredits();
-}
-if (token) show();
+const APP_ID="app_pwpiaegbqw20",API="https://api.butterbase.ai";
+const PRODUCT_ID="1f42d14a-e5d6-43c9-aed4-8696fdef0688";
+let token=localStorage.getItem("pf_token")||"",userEmail=localStorage.getItem("pf_email")||"";
+const $=id=>document.getElementById(id),msg=t=>{$("msg").textContent=t||""};
+const rowsOf=d=>Array.isArray(d)?d:(d&&(d.rows||d.data||d.items))||[];
+async function api(p,o={}){const r=await fetch(API+p,{...o,headers:{"Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{}),...(o.headers||{})}});let b=null;try{b=await r.json()}catch(e){}return{ok:r.ok,status:r.status,body:b}}
+(function(){const text="will your repo\nsurvive the deploy?";const h=$("headline");let i=0;
+setTimeout(()=>{const cur='<span class="inline-block w-[2px] h-[1.1em] bg-black align-middle ml-[2px] animate-blink"></span>';
+const t=setInterval(()=>{i++;h.innerHTML=text.slice(0,i).replace(/\n/g,"<br>")+(i<text.length?cur:"");if(i>=text.length)clearInterval(t)},38)},600)})();
+(function(){const v=$("bgvid");let prevX=null;
+window.addEventListener("mousemove",e=>{if(window.innerWidth<1024||!v.duration)return;
+if(prevX===null){prevX=e.clientX;return}
+const delta=e.clientX-prevX;prevX=e.clientX;
+let t=(v.currentTime||0)+(delta/window.innerWidth)*0.8*v.duration;
+v.currentTime=Math.min(Math.max(0,t),v.duration)});
+v.addEventListener("seeked",()=>{});
+if(window.innerWidth<1024){v.autoplay=true;v.play().catch(()=>{})}})();
+(function(){const b=$("burger"),m=$("mobileMenu"),s=b.querySelectorAll("span");let open=false;
+b.onclick=()=>{open=!open;
+s[0].style.transform=open?"rotate(45deg) translateY(7px)":"";
+s[1].style.opacity=open?"0":"1";
+s[2].style.transform=open?"rotate(-45deg) translateY(-7px)":"";
+m.classList.toggle("opacity-100",open);m.classList.toggle("pointer-events-auto",open);
+m.classList.toggle("opacity-0",!open);m.classList.toggle("pointer-events-none",!open)}})();
+const OPTIONS=["Checks + graph","Deep: Nebius judge","Deep: sandbox run"];
+let selected=[];
+function renderPills(){
+$("pills").innerHTML=OPTIONS.map(o=>{const a=selected.includes(o);
+return `<button onclick="togglePill('${o}')" class="px-5 py-2.5 rounded-full transition-all duration-200 ${a?"bg-[#1C2E1E] text-white shadow-md shadow-emerald-950/5":"bg-white text-[#1C2E1E] border border-[#F1F3F1] hover:bg-[#F1F3F1]/55"}">${a?'<span class="mr-1">✓</span>':""}${o}</button>`}).join("");
+const s=$("pillStatus");
+if(!selected.length){s.innerHTML='<p class="italic text-xs" style="opacity:.5">Please click to select review scope above.</p>';return}
+const deep=selected.some(o=>o.startsWith("Deep"));
+s.innerHTML=`<div class="bg-[#FAFBF9] border border-[#F1F3F1] rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+<span class="text-sm text-[#1C2E1E]">Ready to review: ${selected.join(", ")}${deep?" (1 credit)":""}</span>
+<button onclick="createReview(${deep})" class="text-[#4D6D47] uppercase text-xs font-medium tracking-wide whitespace-nowrap">Let's Go →</button></div>`}
+function togglePill(o){selected=selected.includes(o)?selected.filter(x=>x!==o):[...selected,o];renderPills()}
+async function signup(){const r=await api(`/auth/${APP_ID}/signup`,{method:"POST",body:JSON.stringify({email:$("email").value,password:$("password").value})});
+if(!r.ok)return msg("signup failed: "+JSON.stringify(r.body?.error||r.body));
+$("verifyRow").classList.remove("hidden");msg("Account created — check email for the code (or just log in).")}
+async function verify(){const r=await api(`/auth/${APP_ID}/verify-email`,{method:"POST",body:JSON.stringify({email:$("email").value,code:$("code").value})});
+msg(r.ok?"Verified — log in.":"verify failed")}
+async function login(){const r=await api(`/auth/${APP_ID}/login`,{method:"POST",body:JSON.stringify({email:$("email").value,password:$("password").value})});
+if(!r.ok){$("verifyRow").classList.remove("hidden");return msg("login failed: "+JSON.stringify(r.body?.error||r.body))}
+token=r.body.access_token;userEmail=r.body.user?.email||$("email").value;
+localStorage.setItem("pf_token",token);localStorage.setItem("pf_email",userEmail);show()}
+function logout(){token="";localStorage.clear();location.reload()}
+async function refreshBalance(){const r=await api(`/v1/${APP_ID}/credits_ledger`);
+const bal=rowsOf(r.body).reduce((s,x)=>s+Number(x.delta||0),0);
+$("balance").textContent=`· ${bal} credit${bal===1?"":"s"}`}
+async function buyCredits(){const r=await api(`/v1/${APP_ID}/billing/purchase`,{method:"POST",body:JSON.stringify({productId:PRODUCT_ID,successUrl:location.href.split("?")[0]+"?paid=1",cancelUrl:location.href})});
+if(r.ok&&r.body?.url)location.href=r.body.url;else msg("purchase failed: "+JSON.stringify(r.body?.error||r.body))}
+async function claimCredits(){const r=await api(`/v1/${APP_ID}/fn/claim-credits`,{method:"POST",body:"{}"});
+if(r.ok&&r.body.credited)msg(`+${r.body.credited} credits added.`);refreshBalance()}
+async function createReview(deep){msg("");
+const r=await api(`/v1/${APP_ID}/fn/create-review`,{method:"POST",body:JSON.stringify({repo_url:$("repoUrl").value,kind:deep?"deep":"free"})});
+if(r.status===402)return msg("Deep reviews cost 1 credit — buy a pack first.");
+if(!r.ok)return msg("review failed: "+JSON.stringify(r.body?.error||r.body));
+msg(r.body.dispatched?"Review dispatched to the pipeline on cloud.rocketride.ai…":"Review queued.");
+refreshBalance();loadReviews()}
+async function loadReviews(){const r=await api(`/v1/${APP_ID}/reviews`);
+const rows=rowsOf(r.body).sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||""));
+$("reviewsList").innerHTML=rows.length?rows.map(v=>
+`<div class="border-t border-[#F1F3F1] py-3 flex flex-wrap items-center gap-2">
+<span class="border border-[#F1F3F1] rounded-full px-3 py-0.5 text-xs">${v.kind}</span>
+<span class="border border-[#F1F3F1] rounded-full px-3 py-0.5 text-xs">${v.status}</span>
+<code class="text-xs bg-[#FAFBF9] px-2 py-0.5 rounded">${(v.id||"").slice(0,8)}</code>
+${v.model_id?`<span class="text-xs text-[#738273]">judged by ${v.model_id} on Nebius</span>`:""}
+<button onclick="loadFindings('${v.id}')" class="text-[#4D6D47] uppercase text-xs ml-auto">findings →</button></div>`).join(""):"no reviews yet";
+if(rows.some(v=>v.status==="queued"||v.status==="running"))setTimeout(loadReviews,5000)}
+async function loadFindings(id){const r=await api(`/v1/${APP_ID}/findings`);
+const rows=rowsOf(r.body).filter(f=>f.review_id===id);
+$("findingsCard").classList.remove("hidden");
+$("findings").innerHTML=rows.length?rows.map(f=>{
+const ev=typeof f.graph_evidence==="string"?JSON.parse(f.graph_evidence||"{}"):(f.graph_evidence||{});
+let x="";
+if(ev.blast)x+=`<br><span class="text-[#738273] text-sm">blast radius: reaches ${ev.blast.blast_radius} file(s) — ${(ev.blast.impacted||[]).join(", ")}</span>`;
+if(ev.seen_before?.length)x+=`<br><span class="text-[#738273] text-sm">seen before in ${ev.seen_before.map(s=>s.seen_in).join(", ")}</span>`;
+if(ev.query)x+=`<br><span class="text-[#738273] text-sm">derived from: <code class="bg-[#FAFBF9] px-1 rounded">${ev.query}</code></span>`;
+return `<div class="border-t border-[#F1F3F1] py-4"><span class="${f.severity==="error"?"text-red-700":"text-amber-600"} font-semibold">${f.severity}</span>
+<b class="ml-1">${f.class}</b>${f.file_path?` <code class="text-xs bg-[#FAFBF9] px-2 py-0.5 rounded">${f.file_path}${f.line?":"+f.line:""}</code>`:""}
+${f.model_id?`<span class="border border-[#F1F3F1] rounded-full px-2 py-0.5 text-xs ml-1">judge: ${f.model_id}</span>`:""}
+<br><span class="text-[#1C2E1E]">${f.detail}</span>${x}</div>`}).join(""):'<span class="text-[#738273]">no findings — clear to deploy ✈️</span>'}
+function show(){$("authCard").classList.add("hidden");$("appView").classList.remove("hidden");
+$("ctaLink").textContent=userEmail;$("who").textContent=userEmail;
+renderPills();refreshBalance();loadReviews();
+if(new URLSearchParams(location.search).get("paid"))claimCredits()}
+renderPills();
+if(token)show();
 </script>
-</div></body>
+</body>
 </html>
