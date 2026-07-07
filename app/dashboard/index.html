@@ -17,7 +17,7 @@
 </head>
 <body class="relative bg-white text-neutral-900 font-sans selection:bg-[#EAECE9] selection:text-[#1C2E1E] antialiased overflow-x-hidden flex flex-col lg:block lg:min-h-screen">
 <div class="order-last lg:order-none relative lg:absolute lg:inset-0 lg:z-0 overflow-hidden pointer-events-none w-full aspect-square md:aspect-video lg:aspect-auto lg:h-full bg-neutral-50 lg:bg-transparent">
-<video id="bgvid" muted playsinline loop autoplay preload="auto" class="w-full h-full object-cover object-right lg:object-right-bottom" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260601_110537_3a579fa0-7bbc-4d94-9d25-0e816c7840f5.mp4"></video>
+<video id="bgvid" muted playsinline autoplay preload="auto" class="w-full h-full object-cover object-right lg:object-right-bottom" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260601_110537_3a579fa0-7bbc-4d94-9d25-0e816c7840f5.mp4"></video>
 </div>
 <header class="fixed top-0 inset-x-0 z-10 px-5 sm:px-8 py-4 sm:py-5 flex flex-row justify-between items-center bg-transparent">
 <div class="flex flex-row gap-3 items-center">
@@ -96,7 +96,15 @@ async function api(p,o={}){const r=await fetch(API+p,{...o,headers:{"Content-Typ
 (function(){const text="will your repo\nsurvive the deploy?";const h=$("headline");let i=0;
 setTimeout(()=>{const cur='<span class="inline-block w-[2px] h-[1.1em] bg-black align-middle ml-[2px] animate-blink"></span>';
 const t=setInterval(()=>{i++;h.innerHTML=text.slice(0,i).replace(/\n/g,"<br>")+(i<text.length?cur:"");if(i>=text.length)clearInterval(t)},38)},600)})();
-(function(){const v=$("bgvid");v.loop=true;v.play().catch(()=>{})})();
+(function(){const v=$("bgvid");v.loop=false;
+function reverse(){v.pause();let last=performance.now();
+function step(now){const dt=(now-last)/1000;last=now;
+v.currentTime=Math.max(0,v.currentTime-dt);
+if(v.currentTime<=0.03){v.currentTime=0;v.play().catch(()=>{});return}
+requestAnimationFrame(step)}
+requestAnimationFrame(step)}
+v.addEventListener("ended",reverse);
+v.play().catch(()=>{})})();
 (function(){const b=$("burger"),m=$("mobileMenu"),s=b.querySelectorAll("span");let open=false;
 b.onclick=()=>{open=!open;
 s[0].style.transform=open?"rotate(45deg) translateY(7px)":"";
