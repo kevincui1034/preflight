@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preflight — will your repo survive the deploy?</title>
+<style>
+  :root { --bg:#0b0e14; --card:#141a26; --ink:#e6edf3; --dim:#8b98a9; --acc:#4da3ff; --err:#ff6b6b; --warn:#ffb454; --ok:#3fd68f; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:880px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:22px; } h1 small { color:var(--dim); font-weight:400; font-size:14px; display:block; }
+  .card { background:var(--card); border:1px solid #232b3b; border-radius:10px; padding:16px; margin:12px 0; }
+  input,select { background:#0d1320; color:var(--ink); border:1px solid #2a3550; border-radius:6px; padding:8px 10px; margin:4px 6px 4px 0; }
+  button { background:var(--acc); color:#04121f; border:0; border-radius:6px; padding:8px 14px; font-weight:600; cursor:pointer; margin:4px 6px 4px 0; }
+  button.ghost { background:transparent; color:var(--acc); border:1px solid var(--acc); }
+  .dim { color:var(--dim); font-size:13px; }
+  .sev-error { color:var(--err); font-weight:700; } .sev-warning { color:var(--warn); font-weight:700; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:99px; font-size:12px; border:1px solid #2a3550; margin-right:6px; }
+  .finding { border-top:1px solid #232b3b; padding:10px 0; }
+  code { background:#0d1320; padding:1px 5px; border-radius:4px; font-size:13px; }
+  #msg { color:var(--warn); min-height:1.2em; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+</style>
+</head>
+<body><div class="wrap">
+<h1>🛫 Preflight <small>Paste a repo — an agent tells you whether it will survive the deploy, with graph evidence instead of vibes.</small></h1>
+<div id="msg"></div>
+
+<div class="card" id="authCard">
+  <b>Sign in</b> <span class="dim">(auth by Butterbase — your reviews are yours alone)</span><br>
+  <input id="email" type="email" placeholder="email">
+  <input id="password" type="password" placeholder="password (Aa1! + 8 chars)">
+  <button onclick="login()">Log in</button>
+  <button class="ghost" onclick="signup()">Sign up</button>
+  <div id="verifyRow" style="display:none">
+    <input id="code" placeholder="6-digit email code">
+    <button class="ghost" onclick="verify()">Verify email</button>
+  </div>
+</div>
+
+<div id="appView" style="display:none">
+  <div class="card row">
+    <div><b id="who"></b> <span class="dim" id="balance"></span></div>
+    <div>
+      <button class="ghost" onclick="buyCredits()">Buy 5 credits ($5)</button>
+      <button class="ghost" onclick="logout()">Log out</button>
+    </div>
+  </div>
+  <div class="card">
+    <b>New review</b><br>
+    <input id="repoUrl" size="42" placeholder="https://github.com/you/repo" value="https://github.com/preflight-demo/demo-service">
+    <select id="kind"><option value="free">free — checks + graph</option><option value="deep">deep — + Nebius judge + Daytona run (1 credit)</option></select>
+    <button onclick="createReview()">Run preflight</button>
+  </div>
+  <div class="card"><b>Reviews</b><div id="reviews" class="dim">loading…</div></div>
+  <div class="card" id="findingsCard" style="display:none"><b>Findings</b><div id="findings"></div></div>
+</div>
+
+<script>
+const APP_ID = "app_pwpiaegbqw20";
+const API = "https://api.butterbase.ai";
+const PRODUCT_ID = ""; // set after the Stripe Connect credit-pack product is created
+let token = localStorage.getItem("pf_token") || "";
+let userEmail = localStorage.getItem("pf_email") || "";
+const $ = (id) => document.getElementById(id);
+const msg = (t) => { $("msg").textContent = t || ""; };
+const rowsOf = (d) => Array.isArray(d) ? d : (d && (d.rows || d.data || d.items)) || [];
+
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, { ...opts, headers: {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: "Bearer " + token } : {}),
+    ...(opts.headers || {}) } });
+  let body = null; try { body = await r.json(); } catch (_e) {}
+  return { ok: r.ok, status: r.status, body };
+}
+
+async function signup() {
+  const r = await api(`/auth/${APP_ID}/signup`, { method: "POST", body: JSON.stringify({
+    email: $("email").value, password: $("password").value }) });
+  if (!r.ok) return msg("signup failed: " + JSON.stringify(r.body?.error || r.body));
+  $("verifyRow").style.display = "block";
+  msg("Account created — check email for the 6-digit code (or just try logging in).");
+}
+async function verify() {
+  const r = await api(`/auth/${APP_ID}/verify-email`, { method: "POST", body: JSON.stringify({
+    email: $("email").value, code: $("code").value }) });
+  msg(r.ok ? "Verified — log in." : "verify failed: " + JSON.stringify(r.body?.error || r.body));
+}
+async function login() {
+  const r = await api(`/auth/${APP_ID}/login`, { method: "POST", body: JSON.stringify({
+    email: $("email").value, password: $("password").value }) });
+  if (!r.ok) { $("verifyRow").style.display = "block"; return msg("login failed: " + JSON.stringify(r.body?.error || r.body)); }
+  token = r.body.access_token; userEmail = r.body.user?.email || $("email").value;
+  localStorage.setItem("pf_token", token); localStorage.setItem("pf_email", userEmail);
+  show();
+}
+function logout() { token = ""; localStorage.clear(); location.reload(); }
+
+async function refreshBalance() {
+  const r = await api(`/v1/${APP_ID}/credits_ledger`);
+  const rows = rowsOf(r.body);
+  const bal = rows.reduce((s, x) => s + Number(x.delta || 0), 0);
+  $("balance").textContent = `· ${bal} credit${bal === 1 ? "" : "s"}`;
+}
+async function buyCredits() {
+  if (!PRODUCT_ID) {
+    // Until the Stripe product exists, credits can only arrive via checkout.
+    return msg("Credit packs go live once Stripe Connect onboarding completes.");
+  }
+  const r = await api(`/v1/${APP_ID}/billing/purchase`, { method: "POST", body: JSON.stringify({
+    productId: PRODUCT_ID, successUrl: location.href.split("?")[0] + "?paid=1", cancelUrl: location.href }) });
+  if (r.ok && r.body?.url) location.href = r.body.url;
+  else msg("purchase failed: " + JSON.stringify(r.body?.error || r.body));
+}
+async function claimCredits() {
+  const r = await api(`/v1/${APP_ID}/fn/claim-credits`, { method: "POST", body: "{}" });
+  if (r.ok && r.body.credited) msg(`+${r.body.credited} credits added.`);
+  refreshBalance();
+}
+
+async function createReview() {
+  msg("");
+  const kind = $("kind").value;
+  const r = await api(`/v1/${APP_ID}/fn/create-review`, { method: "POST", body: JSON.stringify({
+    repo_url: $("repoUrl").value, kind }) });
+  if (r.status === 402) return msg("Deep reviews cost 1 credit — buy a pack first.");
+  if (!r.ok) return msg("review failed: " + JSON.stringify(r.body?.error || r.body));
+  msg(r.body.dispatched ? "Review dispatched to the pipeline on cloud.rocketride.ai…" : "Review queued (pipeline endpoint not wired yet).");
+  refreshBalance(); loadReviews();
+}
+
+let reviewsCache = [];
+async function loadReviews() {
+  const r = await api(`/v1/${APP_ID}/reviews`);
+  reviewsCache = rowsOf(r.body).sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+  $("reviews").innerHTML = reviewsCache.length ? reviewsCache.map(v =>
+    `<div class="finding"><span class="pill">${v.kind}</span><span class="pill">${v.status}</span>` +
+    `<code>${(v.id || "").slice(0, 8)}</code> ${v.created_at ? new Date(v.created_at).toLocaleTimeString() : ""}` +
+    (v.model_id ? ` <span class="dim">judged by ${v.model_id} on Nebius</span>` : "") +
+    ` <button class="ghost" onclick="loadFindings('${v.id}')">findings</button></div>`).join("") : "no reviews yet";
+  if (reviewsCache.some(v => v.status === "queued" || v.status === "running")) setTimeout(loadReviews, 5000);
+}
+async function loadFindings(reviewId) {
+  const r = await api(`/v1/${APP_ID}/findings`);
+  const rows = rowsOf(r.body).filter(f => f.review_id === reviewId);
+  $("findingsCard").style.display = "block";
+  $("findings").innerHTML = rows.length ? rows.map(f => {
+    const ev = typeof f.graph_evidence === "string" ? JSON.parse(f.graph_evidence || "{}") : (f.graph_evidence || {});
+    let extra = "";
+    if (ev.blast) extra += `<br><span class="dim">blast radius: reaches ${ev.blast.blast_radius} file(s) — ${(ev.blast.impacted || []).join(", ")}</span>`;
+    if (ev.seen_before?.length) extra += `<br><span class="dim">seen before in ${ev.seen_before.map(s => s.seen_in).join(", ")}</span>`;
+    if (ev.query) extra += `<br><span class="dim">derived from: <code>${ev.query}</code></span>`;
+    return `<div class="finding"><span class="sev-${f.severity}">${f.severity}</span> <b>${f.class}</b>` +
+      (f.file_path ? ` <code>${f.file_path}${f.line ? ":" + f.line : ""}</code>` : "") +
+      (f.model_id ? ` <span class="pill">judge: ${f.model_id}</span>` : "") +
+      `<br>${f.detail}${extra}</div>`;
+  }).join("") : '<span class="dim">no findings — clear to deploy ✈️</span>';
+}
+
+function show() {
+  $("authCard").style.display = "none"; $("appView").style.display = "block";
+  $("who").textContent = userEmail;
+  refreshBalance(); loadReviews();
+  if (new URLSearchParams(location.search).get("paid")) claimCredits();
+}
+if (token) show();
+</script>
+</div></body>
+</html>
